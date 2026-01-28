@@ -1,8 +1,6 @@
-# Custom Heap Manager & Garbage Collector in C
+# Custom Heap Manager & Garbage Collector (Single-File Implementation)
 
-This project is a low-level implementation of a dynamic memory allocator and an automatic garbage collector (GC) written in C. It mimics the behavior of the standard heap but adds a **Mark-and-Sweep** GC algorithm to automatically reclaim unreachable memory.
-
-This demonstrates core systems concepts including pointer arithmetic, heap fragmentation management, and memory introspection.
+This project is a self-contained, low-level implementation of a dynamic memory allocator and an automatic garbage collector (GC) written in C. It mimics the behavior of the standard heap but adds a **Mark-and-Sweep** GC algorithm to automatically reclaim unreachable memory.
 
 ## Key Features
 
@@ -18,11 +16,11 @@ This demonstrates core systems concepts including pointer arithmetic, heap fragm
 
 ### 3. Heap Introspection
 * **Metadata Management:** Uses a custom 5-byte header for every allocation to track offset, size, and pointer references.
-* **Free List Inference:** Can analyze the heap state to generate a linked list of available memory gaps (`infer_free_list`).
+* **Free List Inference:** Can analyze the heap state to generate a linked list of available memory gaps.
 
 ## Technical Implementation
 
-The heap is structured as a contiguous byte array. Instead of using system `malloc` for every object, this allocator reserves one large block and sub-allocates from it.
+The heap is structured as a contiguous byte array. Instead of using system `malloc` for every object, this allocator reserves one large block (`64KB`) and sub-allocates from it.
 
 ### The Allocation Record
 Every allocation is tracked via a metadata record at the start of the heap:
@@ -30,33 +28,12 @@ Every allocation is tracked via a metadata record at the start of the heap:
 * **2 Bytes:** Size (How big the object is)
 * **1 Byte:** Pointer Count (How many pointers are inside this object, used for the GC to traverse children)
 
-### The GC Cycle
-1.  **Mark:** The `p4gc` function iterates through `live_roots`. For every reachable object, it sets a bit in a temporary bitmask. If an object contains pointers, the GC recursively marks those children.
-2.  **Sweep:** The function iterates through the allocation list. Any object that was *not* marked in the first phase is passed to `p4free` to reclaim space.
-
 ## Usage
 
-### Dependencies
-* `p4machine.h`: Defines the `p4heap` structure and constants (e.g., `P4HEAP_TOTAL_SIZE`).
+Since this is a standalone implementation, you can compile it directly without linking external object files.
 
-### Example Workflow
-```c
-#include "p4machine.h"
+### 1. Compilation
+Use `gcc` to compile the single source file.
 
-int main() {
-    // 1. Initialize the heap
-    p4heap *heap = p4heap_create();
-
-    // 2. Allocate memory (16 bytes, containing 0 pointers)
-    void *ptr1 = p4malloc(heap, 16, 0);
-
-    // 3. Allocate memory that points to other memory (16 bytes, 2 pointers)
-    void **ptr2 = p4malloc(heap, 16, 2);
-    ptr2[0] = ptr1; // Link objects
-
-    // 4. Run Garbage Collector
-    // (Assuming we pass a list of stack variables as roots)
-    p4gc(heap, my_stack_roots);
-    
-    return 0;
-}
+```bash
+gcc -o gc_allocator gc_allocator.c
